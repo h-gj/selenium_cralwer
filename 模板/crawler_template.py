@@ -14,7 +14,13 @@ from selenium.common.exceptions import TimeoutException
 import logging
 
 
-logging.basicConfig(level=logging.INFO)
+logging.basicConfig(
+    filename='runtime.log',
+    filemode='a',
+    format='%(asctime)s,%(msecs)d %(name)s %(levelname)s %(message)s',
+    datefmt='%Y-%m-%d %H:%M:%S',
+    level=logging.INFO
+)
 
 
 class Runner:
