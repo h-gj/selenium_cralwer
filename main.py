@@ -190,32 +190,18 @@ cswb = Runner(
 )
 
 
+if __name__ == '__main__':
+    targets = [rmrb.run, wcmh.run, qlcs.run, hnrb.run, hnhw.run, cswb.run]
+    processes = []
 
-rmrb_p = Process(target=rmrb.run)
-wcmh_p = Process(target=wcmh.run)
-qlcs_p = Process(target=qlcs.run)
-hnrb_p = Process(target=hnrb.run)
-hnhw_p = Process(target=hnhw.run)
-cswb_p = Process(target=cswb.run)
+    for t in targets:
+        processes.append(Process(target=t))
 
-rmrb_p.daemon = False
-rmrb_p.daemon = False
-wcmh_p.daemon = False
-qlcs_p.daemon = False
-hnrb_p.daemon = False
-hnhw_p.daemon = False
-cswb_p.daemon = False
+    for p in processes:
+        p.daemon = False
 
-rmrb_p.start()
-wcmh_p.start()
-qlcs_p.start()
-hnrb_p.start()
-hnhw_p.start()
-cswb_p.start()
+    for p in processes:
+        p.start()
 
-rmrb_p.join()
-wcmh_p.join()
-qlcs_p.join()
-hnrb_p.join()
-hnhw_p.join()
-cswb_p.join()
+    for p in processes:
+        p.join()
