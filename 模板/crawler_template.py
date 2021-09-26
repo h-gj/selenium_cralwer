@@ -53,6 +53,10 @@ class Runner:
         self.output_folder_name = 'output'
         self.driver_path = '/Users/mac/Downloads/chromedriver'
 
+        if not os.path.exists(self.crawled_fn):
+            with open(self.crawled_fn, 'w') as fp:
+                pass
+
         with open(self.crawled_fn, 'r') as f:
             self.crawled = set([item.rstrip('\n') for item in f.readlines()])
             # print('crawled', self.crawled)
