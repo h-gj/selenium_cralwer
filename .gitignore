@@ -5,3 +5,4 @@ failed_to_crawl.txt
 __pycache__
 runtime.log
 *.pyc
+*.log

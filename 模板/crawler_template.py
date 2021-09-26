@@ -1,3 +1,4 @@
+import datetime
 import os
 import random
 import time
@@ -14,8 +15,17 @@ from selenium.common.exceptions import TimeoutException
 import logging
 
 
+if not os.path.exists('logs'):
+    os.mkdir('logs')
+
+today = datetime.datetime.today().date()
+today_path = 'logs/%s-runtime.log' % today
+with open(today_path, 'a') as f:
+    pass
+
+
 logging.basicConfig(
-    filename='runtime.log',
+    filename=today_path,
     filemode='a',
     format='%(asctime)s,%(msecs)d %(name)s %(levelname)s %(message)s',
     datefmt='%Y-%m-%d %H:%M:%S',
@@ -109,7 +119,10 @@ class Runner:
             self.all_links = self.test_links
         else:
             for kw in self.keywords:
-                self.all_links += self.get_page_item_links(kw, self.start_page)
+                try:
+                    self.all_links += self.get_page_item_links(kw, self.start_page)
+                except Exception as e:
+                    logging.error(str(traceback.format_exc()))
 
             self.all_links = [l for l in self.all_links if l.startswith('http')]
 
@@ -200,8 +213,9 @@ class Runner:
             if self.debug and self.raise_exception:
                 raise e
 
-            traceback.print_exc()
-            logging.info('ERROR IN CRAWLING: %s', link)
+            logging.error(str(traceback.format_exc()))
+            # traceback.print_exc(file=open('err.log', 'a+'))
+
             with open('failed_to_crawl.txt', 'a') as f:
                 f.write(link + '\n')
         else:
@@ -219,7 +233,7 @@ class Runner:
             if link == 'http:stop':
                 logging.info('RECEIVED STOP SIGNAL, STOPPED!!!')
                 self.driver.close()
-                exit()
+                break
 
             self.process_single(link)
         self.driver.close()
@@ -231,3 +245,5 @@ class Runner:
         t1.start()
         t2.start()
 
+        t1.join()
+        t2.join()
