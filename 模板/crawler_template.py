@@ -1,7 +1,5 @@
 import datetime
 import os
-import random
-import time
 import traceback
 from queue import Queue
 from threading import Thread
@@ -37,6 +35,7 @@ class Runner:
     def __init__(self,
                  keywords,
                  url_template,
+                 driver_path,
                  paragraph_xpath_list,
                  title_xpath_list,
                  headless=True,
@@ -59,36 +58,49 @@ class Runner:
         self.url_template = url_template
         self.test_links = kwargs.get('test_links')
         self.crawled_fn = 'crawled.txt'
+        self.kw_not_match_fn = 'kw_not_match.txt'
         self.intermediate_folder_name = 'intermediates'
         self.output_folder_name = 'output'
-        self.driver_path = '/Users/mac/Downloads/chromedriver'
+        self.driver_path = driver_path
+        self.init_folders_or_files()
+
+        with open(self.crawled_fn, 'r') as f:
+            self.crawled = set([item.rstrip('\n') for item in f.readlines()])
+
+        with open(self.kw_not_match_fn, 'r') as f:
+            self.not_matched = set([item.rstrip('\n') for item in f.readlines()])
+
+        self.driver = self.init_driver()
+        self.raise_exception = kwargs.get('raise_exception', True)
+
+    def init_folders_or_files(self):
+        if not os.path.exists(self.crawled_fn):
+            with open(self.crawled_fn, 'w') as fp:
+                pass
+
+        if not os.path.exists(self.intermediate_folder_name):
+            os.mkdir(self.intermediate_folder_name)
+
+        if not os.path.exists(self.output_folder_name):
+            os.mkdir(self.output_folder_name)
 
         if not os.path.exists(self.crawled_fn):
             with open(self.crawled_fn, 'w') as fp:
                 pass
 
-        with open(self.crawled_fn, 'r') as f:
-            self.crawled = set([item.rstrip('\n') for item in f.readlines()])
-            # print('crawled', self.crawled)
-        self.driver = self.init_driver()
-        self.raise_exception = kwargs.get('raise_exception', True)
-        # self.driver_list.append(self.init_driver())
-        # self.driver_list.append(self.init_driver())
-        # self.driver_list.append(self.init_driver())
-        # self.driver_list.append(self.init_driver())
-        # self.driver_list.append(self.init_driver())
-        # self.driver_list.append(self.init_driver())
-        # self.driver_list.append(self.init_driver())
+        if not os.path.exists(self.kw_not_match_fn):
+            with open(self.kw_not_match_fn, 'w') as fp:
+                pass
 
     def get_paragraphs(self, html):
         for index in range(len(self.paragraph_xpath_list)):
             paragraphs = html.xpath(self.paragraph_xpath_list[index])
             if paragraphs:
-                return paragraphs
+                return paragraphs or []
             else:
                 continue
 
-        return None
+        return []
 
     def save(self, title, url, paragraphs):
         # 新建空白文档
@@ -105,9 +117,6 @@ class Runner:
             # 创建段落描述
             doc.add_paragraph(p)
         # logging.info('SAVING DOC: %s' % title)
-
-        if not os.path.exists(self.output_folder_name):
-            os.mkdir(self.output_folder_name)
 
         doc.save('%s/%s.docx' % (self.output_folder_name, title))
 
@@ -126,7 +135,7 @@ class Runner:
 
             self.all_links = [l for l in self.all_links if l.startswith('http')]
 
-        self.queue.put(end_link)
+        self.queue.put((end_link, None))
         self.all_links.append(end_link)
 
     def init_driver(self):
@@ -155,17 +164,21 @@ class Runner:
 
         for link in links:
             # print('put % into queue' % link)
-            self.queue.put(link)
+            self.queue.put((link, kw))
 
         logging.info('GET PARSED LINKS:\n%s', links)
         total_links += links
         return self.get_page_item_links(kw, page=page + 1, previous_links=links[:], total_links=total_links[:])
 
-    def process_single(self, link):
+    def process_single(self, link, kw):
         if link in self.crawled:
             logging.info('FOUND DUPLICATE LINK: %s, SKIPPING...', link)
-            # print('Found duplicate link: %s, skipping...' % link)
             return
+
+        if link in self.not_matched:
+            logging.info('FOUND NOT MATCHED LINK: %s, SKIPPING...', link)
+            return
+
         try:
             # d = self.init_driver()
             self.driver.get(link)
@@ -182,10 +195,20 @@ class Runner:
                 logging.info('FOUND DUPLICATE DOC: %s, SKIPPING...', title)
                 return
 
-            logging.info('CRAWLING %s %s', title, link)
+            url = self.driver.current_url
+            paragraphs = self.get_paragraphs(html=html)
 
-            if not os.path.exists(self.intermediate_folder_name):
-                os.mkdir(self.intermediate_folder_name)
+            if not paragraphs:
+                raise ValueError('NO PARAGRAPH: %s...' % url)
+
+            full_text = ''.join(paragraphs)
+            if kw not in full_text:
+                logging.info('KEYWORD %s NOT FOUND IN %s, SKIPPING...', kw, link)
+                with open(self.kw_not_match_fn, 'a') as fp:
+                    fp.write(link + '\n')
+                return
+
+            logging.info('CRAWLING %s %s', title, link)
 
             self.driver.get_screenshot_as_file('intermediates/%s-start.png' % title)
 
@@ -196,11 +219,6 @@ class Runner:
             self.driver.execute_script("window.scrollTo(0, document.body.scrollHeight)")
             # time.sleep(0.2)
             self.driver.get_screenshot_as_file('intermediates/%s-end.png' % title)
-
-            url = self.driver.current_url
-            paragraphs = self.get_paragraphs(html=html)
-            if not paragraphs:
-                raise ValueError('No paragraph: %s...' % url)
 
             self.save(title=title, url=url, paragraphs=paragraphs)
             logging.info('SUCCESSFULLY SAVED %s', title)
@@ -219,23 +237,19 @@ class Runner:
             with open('failed_to_crawl.txt', 'a') as f:
                 f.write(link + '\n')
         else:
-            if not os.path.exists(self.crawled_fn):
-                with open(self.crawled_fn, 'w') as fp:
-                    pass
-
             with open(self.crawled_fn, 'a') as f:
                 f.write(link + '\n')
 
     def consume(self):
         while True:
-            link = self.queue.get()
+            link, kw = self.queue.get()
             logging.info('RETRIEVED LINK FROM QUEUE: %s', link)
             if link == 'http:stop':
                 logging.info('RECEIVED STOP SIGNAL, STOPPED!!!')
                 self.driver.close()
                 break
 
-            self.process_single(link)
+            self.process_single(link, kw)
         self.driver.close()
 
     def run(self):

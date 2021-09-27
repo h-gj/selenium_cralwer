@@ -9,6 +9,7 @@ DEBUG = False
 HEADLESS = True
 RAISE_EXCEPTION = False
 KEYWORDS = ['望城县', '长沙市望城区', '望城区档案']
+DRIVER_PATH = '/Users/mac/Downloads/chromedriver'
 
 
 # 人民日报
@@ -41,6 +42,7 @@ class RenMinRiBaoRunner(Runner):
 
 rmrb = RenMinRiBaoRunner(
     keywords=KEYWORDS,
+    driver_path=DRIVER_PATH,
     url_template='',
     paragraph_xpath_list=[
         '//div[@class="rm_txt_con cf"]/p//text()',
@@ -60,6 +62,7 @@ rmrb = RenMinRiBaoRunner(
 # 望城门户
 wcmh = Runner(
     keywords=KEYWORDS,
+    driver_path=DRIVER_PATH,
     url_template='http://searching.hunan.gov.cn/hunan/971206000/news?q={kw}&searchfields=&sm=1&columnCN=&iszq=&aggr_iszq=&p={page}&timetype=timeqb',
     links_xpath='//div[@class="title "]/a/@href',
     paragraph_xpath_list=[
@@ -118,6 +121,7 @@ class SelfRunner(Runner):
 
 qlcs = SelfRunner(
     keywords=KEYWORDS,
+    driver_path=DRIVER_PATH,
     url_template='',
     paragraph_xpath_list=['//div[@class="rm_txt_con cf"]/p//text()',
                           '//div[@class="am-article-bd"]/div[contains(@style, "align") or @align!=""]',
@@ -137,6 +141,7 @@ qlcs = SelfRunner(
 # 湖南日报
 hnrb = Runner(
     keywords=KEYWORDS,
+    driver_path=DRIVER_PATH,
     url_template='http://so.voc.com.cn/cse/search?q={kw}&p={page}&s=7639422230623402302&sti=1440',
     # url_template='http://so.voc.com.cn/cse/search?q={kw}&p={page}&s=7639422230623402302',
     links_xpath='//h3[@class="c-title"]/a/@href',
@@ -157,6 +162,7 @@ hnrb = Runner(
 # 湖南红网
 hnhw = Runner(
     keywords=KEYWORDS,
+    driver_path=DRIVER_PATH,
     url_template='https://news-search.rednet.cn/Search?q={kw}&p={page}',
     links_xpath='//div[@class="result-footer"]/a/@href',
     paragraph_xpath_list=[
@@ -175,6 +181,7 @@ hnhw = Runner(
 # 长沙晚报
 cswb = Runner(
     keywords=KEYWORDS,
+    driver_path=DRIVER_PATH,
     url_template='https://so.icswb.com/default.php?mod=search&m=no&syn=no&f=_all&s=s_show_date_DESC&temp=&p={page}&ps=20&site_id=2&range=&search_target=1&search_key={kw}&search_column=&search_channel_id=0',
     links_xpath='//h3/a/@href',
     paragraph_xpath_list=[
